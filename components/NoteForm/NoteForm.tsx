@@ -1,61 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createNote, type CreateNoteInput } from "@/lib/api";
-import type { NoteTag } from "@/types/note";
-import { useNoteDraftStore, initialDraft } from "@/lib/store/noteStore";
+import { createNote, type CreateNoteInput } from "@/lib/api/clientApi";
+import { TAGS, type NoteTag } from "@/types/note";
+import { useNoteDraftStore } from "@/lib/store/noteStore";
 import css from "./NoteForm.module.css";
 
 interface NoteFormProps {
   onCancel?: () => void;
 }
 
-const TAGS: NoteTag[] = ["Todo", "Work", "Personal", "Meeting", "Shopping"];
-
 export default function NoteForm({ onCancel }: NoteFormProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { draft, setDraft, clearDraft } = useNoteDraftStore();
-  const [form, setForm] = useState<CreateNoteInput>(draft ?? initialDraft);
 
-  useEffect(() => {
-    setForm(draft ?? initialDraft);
-  }, [draft]);
+  const handleChange =
+    (field: keyof CreateNoteInput) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+      const value = field === "tag" ? (e.target.value as NoteTag) : e.target.value;
+      setDraft({ [field]: value } as Partial<CreateNoteInput>);
+    };
 
-  const { mutateAsync, isPending } = useMutation({
+  const { mutate, isPending, error } = useMutation({
     mutationFn: (payload: CreateNoteInput) => createNote(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notes"] });
+    onSuccess: (created) => {
+      clearDraft();
+      queryClient.invalidateQueries({ queryKey: ["notes"], exact: false });
+      router.replace(`/notes/filter/${encodeURIComponent(created.tag ?? "All")}`);
     },
   });
 
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value } = e.target;
-    const next = { ...form, [name]: value };
-    setForm(next);
-    setDraft(next);
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    await mutateAsync(form);
-    clearDraft();
-    router.back();
+    mutate(draft);
   };
 
   const handleCancel = () => {
-    onCancel?.();
-    router.back();
+    if (onCancel) onCancel();
+    else router.back();
   };
 
-  const titleOk =
-    form.title.trim().length >= 3 && form.title.trim().length <= 50;
+  const tagOptions = TAGS.filter((t): t is NoteTag => t !== "All");
+  const titleOk = draft.title.trim().length >= 3 && draft.title.trim().length <= 50;
   const canSubmit = titleOk && !isPending;
 
   return (
@@ -67,8 +55,9 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
           name="title"
           type="text"
           className={css.input}
-          value={form.title}
-          onChange={handleChange}
+          value={draft.title}
+          onChange={handleChange("title")}
+          placeholder="Note title"
           required
           minLength={3}
           maxLength={50}
@@ -82,8 +71,8 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
           name="content"
           rows={8}
           className={css.textarea}
-          value={form.content ?? ""}
-          onChange={handleChange}
+          value={draft.content ?? ""}
+          onChange={handleChange("content")}
           maxLength={500}
         />
       </div>
@@ -94,11 +83,11 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
           id="tag"
           name="tag"
           className={css.select}
-          value={form.tag}
-          onChange={handleChange}
+          value={draft.tag}
+          onChange={handleChange("tag")}
           required
         >
-          {TAGS.map((t) => (
+          {tagOptions.map((t) => (
             <option key={t} value={t}>
               {t}
             </option>
@@ -106,19 +95,22 @@ export default function NoteForm({ onCancel }: NoteFormProps) {
         </select>
       </div>
 
+      {error && (
+        <p className={css.error}>
+          {error instanceof Error ? error.message : "Failed to create note"}
+        </p>
+      )}
+
       <div className={css.actions}>
         <button
           type="button"
           className={css.cancelButton}
           onClick={handleCancel}
+          disabled={isPending}
         >
           Cancel
         </button>
-        <button
-          type="submit"
-          className={css.submitButton}
-          disabled={!canSubmit}
-        >
+        <button type="submit" className={css.submitButton} disabled={!canSubmit}>
           {isPending ? "Creating..." : "Create note"}
         </button>
       </div>

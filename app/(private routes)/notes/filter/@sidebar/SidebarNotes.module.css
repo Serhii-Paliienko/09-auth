@@ -1,0 +1,30 @@
+.menuList {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+
+.menuItem {
+  margin-bottom: 16px;
+}
+
+.menuLink {
+  text-decoration: none;
+  color: white;
+  font-size: 16px;
+  display: block;
+  padding: 8px 16px;
+  transition: background-color 0.3s ease;
+}
+
+.menuLink:hover {
+  background-color: #444;
+  color: #ddd;
+}
+
+.menuLink[aria-current="page"] {
+  background-color: #eef2ff;
+  color: #1e40af;
+  font-weight: 700;
+  border-radius: 8px;
+}

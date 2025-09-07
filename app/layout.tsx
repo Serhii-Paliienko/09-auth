@@ -5,7 +5,8 @@ import "./globals.css";
 import Header from "@/components/Header/Header";
 import Footer from "@/components/Footer/Footer";
 import TanStackProvider from "@/components/TanStackProvider/TanStackProvider";
-import { OG_IMAGE, SITE_URL } from "@/lib/api";
+import { OG_IMAGE, SITE_URL } from "@/lib/site";
+import AuthProvider from "@/components/AuthProvider/AuthProvider";
 
 const roboto = Roboto({
   subsets: ["latin"],
@@ -35,17 +36,13 @@ export const metadata: Metadata = {
     type: "website",
     url: SITE_URL,
     title: "NoteHub — Fast Notes App with Instant Search & Tags",
-    description:
-      "Fast notes app for busy people. Instant search, tag filters, clean UX.",
-    images: [
-      { url: OG_IMAGE, alt: "NoteHub notes app — instant search and tags" },
-    ],
+    description: "Fast notes app for busy people. Instant search, tag filters, clean UX.",
+    images: [{ url: OG_IMAGE, alt: "NoteHub notes app — instant search and tags" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "NoteHub — Fast Notes App with Instant Search & Tags",
-    description:
-      "Capture ideas fast. Find anything instantly with search and tag filters.",
+    description: "Capture ideas fast. Find anything instantly with search and tag filters.",
     images: [OG_IMAGE],
   },
   robots: { index: true, follow: true },
@@ -62,12 +59,13 @@ export default function RootLayout({
     <html lang="en">
       <body className={roboto.variable}>
         <TanStackProvider>
-          <Header />
-          {children}
-          <Footer />
-          {modal}
+          <AuthProvider>
+            <Header />
+            {children}
+            {modal}
+            <Footer />
+          </AuthProvider>
         </TanStackProvider>
-        <div id="modal-root" />
       </body>
     </html>
   );

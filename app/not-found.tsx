@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import css from "./Home.module.css";
-import { OG_IMAGE, SITE_URL } from "@/lib/api";
+import { OG_IMAGE, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "404 — Page not found",

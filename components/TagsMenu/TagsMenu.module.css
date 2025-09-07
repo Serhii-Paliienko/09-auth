@@ -53,3 +53,8 @@
   background-color: #f0f0f0;
   color: #333;
 }
+
+.menuButton[aria-pressed="true"] {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}

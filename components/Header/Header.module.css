@@ -40,3 +40,8 @@
 .navigationLink:hover {
   color: #ddd;
 }
+
+.navigationLink[aria-current="page"] {
+  text-decoration: underline;
+  font-weight: 700;
+}

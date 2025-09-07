@@ -15,8 +15,7 @@ const TagsMenu = () => {
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
     document.addEventListener("mousedown", onDoc);
@@ -34,6 +33,7 @@ const TagsMenu = () => {
         className={css.menuButton}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-pressed={pathname.startsWith("/notes")}
         onClick={() => setOpen((v) => !v)}
       >
         Notes ▾

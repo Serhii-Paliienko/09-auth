@@ -6,9 +6,10 @@ import css from "./SearchBox.module.css";
 interface SearchBoxProps {
   value: string;
   onChange: (v: string) => void;
+  placeholder?: string;
 }
 
-const SearchBox = ({ value, onChange }: SearchBoxProps) => {
+const SearchBox = ({ value, onChange, placeholder }: SearchBoxProps) => {
   const handleChange = (e: ChangeEvent<HTMLInputElement>) =>
     onChange(e.target.value);
 
@@ -16,7 +17,7 @@ const SearchBox = ({ value, onChange }: SearchBoxProps) => {
     <input
       className={css.input}
       type="text"
-      placeholder="Search notes"
+      placeholder={placeholder ?? "Search notes..."}
       value={value}
       onChange={handleChange}
       aria-label="Search notes"
