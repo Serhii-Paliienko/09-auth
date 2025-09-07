@@ -2,7 +2,11 @@ import { cookies } from "next/headers";
 import type { Note, NoteTag } from "@/types/note";
 import type { User } from "@/types/user";
 
-const BASE = `${process.env.NEXT_PUBLIC_API_URL}/api`;
+const origin =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+
+const BASE = `${origin}/api`;
 
 async function cookieHeader(): Promise<string | undefined> {
   const store = await cookies();

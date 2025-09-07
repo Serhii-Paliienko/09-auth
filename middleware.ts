@@ -1,42 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const PUBLIC_PATHS = [
-  "/",
-  "/sign-in",
-  "/sign-up",
-  "/api",
-  "/_next",
-  "/favicon",
-  "/assets",
-];
+const AUTH_ROUTES = ["/sign-in", "/sign-up"];
+const PRIVATE_PREFIXES = ["/profile", "/notes"];
 
-function isPublic(req: NextRequest) {
-  const { pathname } = req.nextUrl;
-  return PUBLIC_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(p + "/")
-  );
+function isAuthRoute(pathname: string) {
+  return AUTH_ROUTES.some((p) => pathname.startsWith(p));
+}
+function isPrivateRoute(pathname: string) {
+  return PRIVATE_PREFIXES.some((p) => pathname.startsWith(p));
 }
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const accessToken = req.cookies.get("accessToken")?.value;
 
-  const isAuthPage =
-    pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up");
-  const isPrivate =
-    pathname.startsWith("/profile") || pathname.startsWith("/notes");
-
-  if (isAuthPage && accessToken) {
-    return NextResponse.redirect(new URL("/profile", req.url));
+  if (
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/_next") ||
+    pathname === "/favicon.ico" ||
+    pathname.startsWith("/assets")
+  ) {
+    return NextResponse.next();
   }
 
-  if (isPrivate && !accessToken) {
-    return NextResponse.redirect(new URL("/sign-in", req.url));
+  const isAuth = Boolean(req.cookies.get("accessToken")?.value);
+
+  if (isPrivateRoute(pathname) && !isAuth) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/sign-in";
+    url.searchParams.set("from", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  if (isAuthRoute(pathname) && isAuth) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/profile";
+    return NextResponse.redirect(url);
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|assets).*)"],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|assets).*)"],
 };
