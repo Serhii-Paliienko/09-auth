@@ -20,7 +20,7 @@ export default function SignUpPage() {
       const user = await registerUser({ email, password });
       setUser(user);
       router.push("/profile");
-    } catch (err) {
+    } catch {
       setError("Registration failed");
     }
   };

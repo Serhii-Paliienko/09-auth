@@ -1,48 +1,51 @@
-import { NextRequest, NextResponse } from "next/server";
-import { api } from "../../api";
-import { isAxiosError } from "axios";
-import { logErrorResponse } from "../../_utils/utils";
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { api } from '../../api';
+import { parse } from 'cookie';
+import { isAxiosError } from 'axios';
+import { logErrorResponse } from '../../_utils/utils';
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const cookieHeader = req.headers.get("cookie") ?? "";
+    const cookieStore = await cookies();
+    const refreshToken = cookieStore.get('refreshToken')?.value;
+    const next = request.nextUrl.searchParams.get('next') || '/';
 
-    const apiRes = await api.get("/auth/session", {
-      headers: { cookie: cookieHeader },
-    });
-
-    const redirectTo = req.nextUrl.searchParams.get("redirect");
-    const setCookie = apiRes.headers["set-cookie"];
-
-    if (redirectTo) {
-      const redirectUrl = new URL(redirectTo, req.nextUrl);
-      const res = NextResponse.redirect(redirectUrl, { status: 302 });
+    if (refreshToken) {
+      const apiRes = await api.get('auth/session', {
+        headers: {
+          Cookie: cookieStore.toString(),
+        },
+      });
+      const setCookie = apiRes.headers['set-cookie'];
       if (setCookie) {
-        if (Array.isArray(setCookie)) {
-          setCookie.forEach((c) => res.headers.append("set-cookie", c));
-        } else {
-          res.headers.set("set-cookie", setCookie);
-        }
-      }
-      return res;
-    }
+        const cookieArray = Array.isArray(setCookie) ? setCookie : [setCookie];
+        let accessToken = '';
+        let refreshToken = '';
 
-    const res = NextResponse.json(apiRes.data, { status: apiRes.status });
-    if (setCookie) {
-      if (Array.isArray(setCookie)) {
-        setCookie.forEach((c) => res.headers.append("set-cookie", c));
-      } else {
-        res.headers.set("set-cookie", setCookie);
+        for (const cookieStr of cookieArray) {
+          const parsed = parse(cookieStr);
+          if (parsed.accessToken) accessToken = parsed.accessToken;
+          if (parsed.refreshToken) refreshToken = parsed.refreshToken;
+        }
+
+        if (accessToken) cookieStore.set('accessToken', accessToken);
+        if (refreshToken) cookieStore.set('refreshToken', refreshToken);
+
+        return NextResponse.redirect(new URL(next, request.url), {
+          headers: {
+            'set-cookie': cookieStore.toString(),
+          },
+        });
       }
     }
-    return res;
+    return NextResponse.redirect(new URL('/sign-in', request.url));
   } catch (error) {
-    logErrorResponse(error);
     if (isAxiosError(error)) {
-      const status = error.response?.status ?? 500;
-      const data = error.response?.data ?? { message: "Unexpected error" };
-      return NextResponse.json(data, { status });
+      logErrorResponse(error.response?.data);
+      return NextResponse.redirect(new URL('/sign-in', request.url));
     }
-    return NextResponse.json({ message: "Unexpected error" }, { status: 500 });
+    logErrorResponse({ message: (error as Error).message });
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
