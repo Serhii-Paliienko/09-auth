@@ -5,9 +5,11 @@ import Image from "next/image";
 import css from "./EditProfilePage.module.css";
 import { getMe, updateMe } from "@/lib/api/clientApi";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/lib/store/authStore";
 
 export default function EditProfilePage() {
   const router = useRouter();
+  const setUser = useAuthStore((s) => s.setUser);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [avatar, setAvatar] = useState<string | undefined>(undefined);
@@ -22,7 +24,8 @@ export default function EditProfilePage() {
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await updateMe({ username });
+    const updated = await updateMe({ username });
+    setUser(updated);
     router.push("/profile");
   };
 
@@ -32,10 +35,7 @@ export default function EditProfilePage() {
         <h1 className={css.formTitle}>Edit Profile</h1>
 
         <Image
-          src={
-            avatar ??
-            "https://ac.goit.global/fullstack/react/default-avatar.jpg"
-          }
+          src={avatar ?? "https://ac.goit.global/fullstack/react/default-avatar.jpg"}
           alt="User Avatar"
           width={120}
           height={120}

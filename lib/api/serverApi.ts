@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { api } from "./api";
 import type { Note, NoteTag } from "@/types/note";
 import type { User } from "@/types/user";
 
@@ -15,38 +16,78 @@ async function cookieHeader(): Promise<string | undefined> {
   return all.map(({ name, value }) => `${name}=${value}`).join("; ");
 }
 
-async function withCookieFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const cookie = await cookieHeader();
-
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: {
-      ...(init?.headers || {}),
-      ...(cookie ? { Cookie: cookie } : {}),
-    },
-    cache: "no-store",
+export async function registerUserServer(payload: {
+  email: string;
+  password: string;
+}): Promise<User> {
+  const { data } = await api.post<User>("/auth/register", payload, {
+    baseURL: BASE,
   });
-
-  if (!res.ok) {
-    throw new Error(`Request failed: ${res.status} ${res.statusText}`);
-  }
-  return res.json() as Promise<T>;
+  return data;
 }
 
-export const getMeServer = () => withCookieFetch<User>("/users/me");
+export async function loginUserServer(payload: { email: string; password: string }): Promise<User> {
+  const { data } = await api.post<User>("/auth/login", payload, {
+    baseURL: BASE,
+  });
+  return data;
+}
+
+export async function logoutUserServer(): Promise<void> {
+  const Cookie = await cookieHeader();
+  await api.post(
+    "/auth/logout",
+    {},
+    {
+      baseURL: BASE,
+      headers: Cookie ? { Cookie } : undefined,
+    },
+  );
+}
+
+export async function getSessionServer(): Promise<{ success: boolean }> {
+  const Cookie = await cookieHeader();
+  const { data } = await api.get<{ success: boolean }>("/auth/session", {
+    baseURL: BASE,
+    headers: Cookie ? { Cookie } : undefined,
+  });
+  return data;
+}
+
+export async function getMeServer(): Promise<User> {
+  const Cookie = await cookieHeader();
+  const { data } = await api.get<User>("/users/me", {
+    baseURL: BASE,
+    headers: Cookie ? { Cookie } : undefined,
+  });
+  return data;
+}
 
 export async function fetchNotesServer(params: {
   page?: number;
   perPage?: number;
   search?: string;
   tag?: NoteTag | "All";
-}) {
-  const q = new URLSearchParams();
-  if (params.page) q.set("page", String(params.page));
-  if (params.perPage) q.set("perPage", String(params.perPage));
-  if (params.search) q.set("search", params.search);
-  if (params.tag && params.tag !== "All") q.set("tag", params.tag);
-  return withCookieFetch<{ notes: Note[]; totalPages: number }>(`/notes?${q.toString()}`);
+}): Promise<{ notes: Note[]; totalPages: number }> {
+  const { page = 1, perPage = 12, search, tag } = params ?? {};
+  const q: Record<string, unknown> = { page, perPage };
+  if (search) q.search = search;
+  if (tag && tag !== "All") q.tag = tag;
+
+  const Cookie = await cookieHeader();
+  const { data } = await api.get<{ notes: Note[]; totalPages: number }>("/notes", {
+    baseURL: BASE,
+    headers: Cookie ? { Cookie } : undefined,
+    params: q,
+  });
+  return data;
 }
 
-export const fetchNoteByIdServer = (id: string) => withCookieFetch<Note>(`/notes/${id}`);
+export async function fetchNoteByIdServer(id: string): Promise<Note> {
+  const Cookie = await cookieHeader();
+  const { data } = await api.get<Note>(`/notes/${id}`, {
+    baseURL: BASE,
+    headers: Cookie ? { Cookie } : undefined,
+  });
+  return data;
+}
